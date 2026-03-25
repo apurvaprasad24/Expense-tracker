@@ -78,7 +78,9 @@ expense-tracker/
 
 ## 📸 Screenshots
 
-> *(Add screenshots of your dashboard, add expense form, and budget page here)*
+> <img width="1899" height="823" alt="image" src="https://github.com/user-attachments/assets/2313bf37-3e9e-4594-8ae2-c90b4cc1af92" />
+><img width="1813" height="802" alt="image" src="https://github.com/user-attachments/assets/b22ff016-75e5-4d34-adca-18c2e20adefc" />
+
 
 ## Author
 
