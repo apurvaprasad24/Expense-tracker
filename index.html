@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ExpenseIQ — Smart Expense Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #151820;
+      --surface2: #1c2030;
+      --border: #252a3a;
+      --accent: #7c6ff7;
+      --accent2: #f7916f;
+      --green: #4ade80;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --text: #e8eaf0;
+      --muted: #7a8099;
+      --font-display: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR */
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 220px; min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 28px 0; position: fixed; top: 0; left: 0; bottom: 0;
+    }
+    .logo {
+      font-family: var(--font-display);
+      font-size: 1.3rem; font-weight: 800;
+      padding: 0 24px 32px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent); }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 24px; font-size: 0.9rem; font-weight: 500;
+      color: var(--muted); cursor: pointer; transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { color: var(--text); background: var(--surface2); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(124,111,247,0.08); }
+    .nav-icon { font-size: 1.1rem; }
+
+    /* MAIN */
+    .main { margin-left: 220px; flex: 1; padding: 36px 40px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* HEADER */
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 32px;
+    }
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 1.75rem; font-weight: 800; letter-spacing: -0.5px;
+    }
+    .month-badge {
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 6px 14px; border-radius: 20px;
+      font-size: 0.82rem; color: var(--muted);
+    }
+
+    /* STAT CARDS */
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 22px;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; right: 0;
+      width: 80px; height: 80px; border-radius: 50%;
+      background: var(--accent-color, var(--accent));
+      opacity: 0.07; transform: translate(20px,-20px);
+    }
+    .stat-label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .stat-value { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; }
+    .stat-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+    /* CHARTS */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px;
+    }
+    .card-title {
+      font-family: var(--font-display); font-size: 0.95rem; font-weight: 700;
+      margin-bottom: 20px; color: var(--text);
+    }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* EXPENSES TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    thead th {
+      padding: 10px 14px; text-align: left;
+      font-size: 0.72rem; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 13px 14px; }
+    .category-pill {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 500;
+    }
+    .delete-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 1rem; padding: 2px 6px;
+      border-radius: 6px; transition: all 0.15s;
+    }
+    .delete-btn:hover { background: rgba(248,113,113,0.15); color: var(--red); }
+
+    /* ADD EXPENSE FORM */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group label { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); padding: 11px 14px; border-radius: 10px;
+      font-family: var(--font-body); font-size: 0.9rem;
+      outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--accent);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-group select option { background: var(--surface2); }
+    .form-full { grid-column: 1 / -1; }
+    .btn-primary {
+      background: var(--accent); color: #fff; border: none;
+      padding: 12px 28px; border-radius: 10px;
+      font-family: var(--font-display); font-weight: 700; font-size: 0.95rem;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
+    }
+    .btn-primary:hover { background: #9189f9; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* ALERT TOAST */
+    #alert-toast {
+      position: fixed; top: 24px; right: 24px; z-index: 999;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 14px 20px; border-radius: 12px;
+      font-size: 0.88rem; max-width: 340px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transform: translateX(400px); transition: transform 0.3s ease;
+    }
+    #alert-toast.show { transform: translateX(0); }
+    #alert-toast.warn { border-left: 4px solid var(--yellow); }
+    #alert-toast.danger { border-left: 4px solid var(--red); }
+    #alert-toast.success { border-left: 4px solid var(--green); }
+
+    /* BUDGET PAGE */
+    .budget-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+    .budget-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px;
+    }
+    .budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .budget-name { font-weight: 600; font-size: 0.95rem; }
+    .budget-amounts { font-size: 0.8rem; color: var(--muted); }
+    .progress-bar {
+      height: 8px; background: var(--surface2);
+      border-radius: 4px; overflow: hidden; margin-bottom: 10px;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 4px; transition: width 0.5s ease;
+    }
+    .budget-edit { display: flex; gap: 8px; margin-top: 12px; }
+    .budget-edit input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); padding: 7px 10px; border-radius: 8px;
+      font-family: var(--font-body); font-size: 0.85rem; outline: none;
+    }
+    .budget-edit input:focus { border-color: var(--accent); }
+    .btn-sm {
+      background: var(--accent); color: #fff; border: none;
+      padding: 7px 14px; border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-sm:hover { background: #9189f9; }
+
+    /* EMPTY STATE */
+    .empty { text-align: center; padding: 48px; color: var(--muted); }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+    /* LOADING */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* CATEGORY COLORS */
+    .cat-food       { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    .cat-transport  { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+    .cat-entertainment { background: rgba(167,139,250,0.15); color: #a78bfa; }
+    .cat-shopping   { background: rgba(244,114,182,0.15); color: #f472b6; }
+    .cat-health     { background: rgba(74,222,128,0.15);  color: #4ade80; }
+    .cat-education  { background: rgba(251,146,60,0.15);  color: #fb923c; }
+    .cat-other      { background: rgba(148,163,184,0.15); color: #94a3b8; }
+
+    @media(max-width:900px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="logo">Expense<span>IQ</span></div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('add')">
+      <span class="nav-icon">➕</span> Add Expense
+    </div>
+    <div class="nav-item" onclick="showPage('expenses')">
+      <span class="nav-icon">📋</span> All Expenses
+    </div>
+    <div class="nav-item" onclick="showPage('budgets')">
+      <span class="nav-icon">🎯</span> Budgets
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <span class="month-badge" id="current-month"></span>
+      </div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card skeleton" style="height:100px"></div>
+        <div class="stat-card skeleton" style="height:100px"></div>
+        <div class="stat-card skeleton" style="height:100px"></div>
+        <div class="stat-card skeleton" style="height:100px"></div>
+      </div>
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-title">Spending by Category</div>
+          <div class="chart-wrap"><canvas id="donut-chart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Daily Spending (Last 14 Days)</div>
+          <div class="chart-wrap"><canvas id="line-chart"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent Expenses</div>
+        <div class="table-wrap" id="recent-table">Loading...</div>
+      </div>
+    </div>
+
+    <!-- ADD EXPENSE -->
+    <div class="page" id="page-add">
+      <div class="page-header">
+        <h1 class="page-title">Add Expense</h1>
+      </div>
+      <div class="card" style="max-width:620px">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Title *</label>
+            <input type="text" id="f-title" placeholder="e.g. Lunch at canteen" />
+          </div>
+          <div class="form-group">
+            <label>Amount (₹) *</label>
+            <input type="number" id="f-amount" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Category *</label>
+            <select id="f-category">
+              <option value="">Select category</option>
+              <option>Food</option>
+              <option>Transport</option>
+              <option>Entertainment</option>
+              <option>Shopping</option>
+              <option>Health</option>
+              <option>Education</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group form-full">
+            <label>Note (optional)</label>
+            <textarea id="f-note" placeholder="Any extra details..."></textarea>
+          </div>
+          <div class="form-full">
+            <button class="btn-primary" onclick="addExpense()">Add Expense</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALL EXPENSES -->
+    <div class="page" id="page-expenses">
+      <div class="page-header">
+        <h1 class="page-title">All Expenses</h1>
+        <select id="filter-category" onchange="loadExpenses()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:10px;font-family:var(--font-body);outline:none;">
+          <option value="">All Categories</option>
+          <option>Food</option><option>Transport</option>
+          <option>Entertainment</option><option>Shopping</option>
+          <option>Health</option><option>Education</option><option>Other</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="table-wrap" id="all-expenses-table">Loading...</div>
+      </div>
+    </div>
+
+    <!-- BUDGETS -->
+    <div class="page" id="page-budgets">
+      <div class="page-header">
+        <h1 class="page-title">Budget Manager</h1>
+      </div>
+      <div class="budget-grid" id="budget-grid">Loading...</div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ALERT TOAST -->
+<div id="alert-toast"></div>
+
+<script>
+const API = 'api';
+let donutChart, lineChart;
+
+// ── NAV ──────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'expenses')  loadExpenses();
+  if (name === 'budgets')   loadBudgets();
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('alert-toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 4000);
+}
+
+// ── CATEGORY COLORS ───────────────────────────────────────────────────
+const catClass = c => 'cat-' + (c || 'other').toLowerCase().replace(/\s+/g, '');
+const catColors = {
+  'Food':'#fbbf24','Transport':'#60a5fa','Entertainment':'#a78bfa',
+  'Shopping':'#f472b6','Health':'#4ade80','Education':'#fb923c','Other':'#94a3b8'
+};
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const d = new Date();
+  document.getElementById('current-month').textContent =
+    d.toLocaleString('default',{month:'long'}) + ' ' + d.getFullYear();
+
+  const res = await fetch(`${API}/stats.php`);
+  const json = await res.json();
+  if (!json.success) return;
+
+  const { totals, by_category, daily, budgets } = json;
+  const totalSpent  = parseFloat(totals.total || 0);
+  const totalBudget = budgets.reduce((s,b) => s + parseFloat(b.budget_limit), 0);
+  const topCat      = by_category[0] || {};
+  const overCount   = budgets.filter(b => parseFloat(b.spent) >= parseFloat(b.budget_limit)).length;
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card" style="--accent-color:var(--accent)">
+      <div class="stat-label">Total Spent</div>
+      <div class="stat-value">₹${totalSpent.toLocaleString('en-IN',{minimumFractionDigits:0})}</div>
+      <div class="stat-sub">${totals.count} transactions</div>
+    </div>
+    <div class="stat-card" style="--accent-color:var(--accent2)">
+      <div class="stat-label">Total Budget</div>
+      <div class="stat-value">₹${totalBudget.toLocaleString('en-IN',{minimumFractionDigits:0})}</div>
+      <div class="stat-sub">${Math.round((totalSpent/totalBudget)*100)||0}% used</div>
+    </div>
+    <div class="stat-card" style="--accent-color:var(--yellow)">
+      <div class="stat-label">Top Category</div>
+      <div class="stat-value" style="font-size:1.3rem">${topCat.category || '—'}</div>
+      <div class="stat-sub">${topCat.total ? '₹'+parseFloat(topCat.total).toLocaleString('en-IN') : 'No data'}</div>
+    </div>
+    <div class="stat-card" style="--accent-color:${overCount?'var(--red)':'var(--green)'}">
+      <div class="stat-label">Budget Alerts</div>
+      <div class="stat-value" style="color:${overCount?'var(--red)':'var(--green)'}">${overCount}</div>
+      <div class="stat-sub">${overCount ? 'categories over limit' : 'All under limit ✓'}</div>
+    </div>`;
+
+  // DONUT
+  if (donutChart) donutChart.destroy();
+  const dCtx = document.getElementById('donut-chart').getContext('2d');
+  donutChart = new Chart(dCtx, {
+    type: 'doughnut',
+    data: {
+      labels: by_category.map(c => c.category),
+      datasets: [{
+        data: by_category.map(c => parseFloat(c.total)),
+        backgroundColor: by_category.map(c => catColors[c.category] || '#94a3b8'),
+        borderWidth: 0, hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'right', labels:{ color:'#7a8099', font:{family:'DM Sans',size:12}, boxWidth:12 } }
+      },
+      cutout: '65%'
+    }
+  });
+
+  // LINE
+  if (lineChart) lineChart.destroy();
+  const lCtx = document.getElementById('line-chart').getContext('2d');
+  const grad = lCtx.createLinearGradient(0, 0, 0, 220);
+  grad.addColorStop(0, 'rgba(124,111,247,0.3)');
+  grad.addColorStop(1, 'rgba(124,111,247,0)');
+  lineChart = new Chart(lCtx, {
+    type: 'line',
+    data: {
+      labels: daily.map(d => d.date.slice(5)),
+      datasets: [{
+        data: daily.map(d => parseFloat(d.total)),
+        borderColor: '#7c6ff7', backgroundColor: grad,
+        borderWidth: 2.5, fill: true, tension: 0.4,
+        pointBackgroundColor: '#7c6ff7', pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#7a8099', font:{size:11} } },
+        y: { grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#7a8099', font:{size:11},
+          callback: v => '₹'+v } }
+      }
+    }
+  });
+
+  // RECENT TABLE
+  loadRecentTable();
+}
+
+async function loadRecentTable() {
+  const res  = await fetch(`${API}/expenses.php?limit=8`);
+  const json = await res.json();
+  renderTable('recent-table', json.data || []);
+}
+
+// ── ALL EXPENSES ──────────────────────────────────────────────────────
+async function loadExpenses() {
+  const cat = document.getElementById('filter-category').value;
+  const url = cat ? `${API}/expenses.php?category=${cat}&limit=100` : `${API}/expenses.php?limit=100`;
+  const res  = await fetch(url);
+  const json = await res.json();
+  renderTable('all-expenses-table', json.data || []);
+}
+
+function renderTable(containerId, data) {
+  const el = document.getElementById(containerId);
+  if (!data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><p>No expenses found</p></div>'; return; }
+  el.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Title</th><th>Amount</th><th>Category</th><th>Note</th><th>Date</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${data.map(e => `
+          <tr>
+            <td style="font-weight:500">${e.title}</td>
+            <td style="font-weight:700;color:var(--accent2)">₹${parseFloat(e.amount).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+            <td><span class="category-pill ${catClass(e.category)}">${e.category}</span></td>
+            <td style="color:var(--muted);font-size:0.83rem">${e.note || '—'}</td>
+            <td style="color:var(--muted);font-size:0.82rem">${new Date(e.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</td>
+            <td><button class="delete-btn" onclick="deleteExpense(${e.id}, this)">🗑</button></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── ADD EXPENSE ───────────────────────────────────────────────────────
+async function addExpense() {
+  const title    = document.getElementById('f-title').value.trim();
+  const amount   = parseFloat(document.getElementById('f-amount').value);
+  const category = document.getElementById('f-category').value;
+  const note     = document.getElementById('f-note').value.trim();
+
+  if (!title || !amount || !category) { showToast('Please fill in all required fields.', 'warn'); return; }
+
+  const res  = await fetch(`${API}/expenses.php`, {
+    method: 'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ title, amount, category, note })
+  });
+  const json = await res.json();
+  if (!json.success) { showToast('Failed to add expense.', 'danger'); return; }
+
+  document.getElementById('f-title').value  = '';
+  document.getElementById('f-amount').value = '';
+  document.getElementById('f-category').value = '';
+  document.getElementById('f-note').value   = '';
+
+  if (json.alert) showToast(json.alert, json.alert.includes('exceeded') ? 'danger' : 'warn');
+  else showToast('Expense added successfully!', 'success');
+}
+
+// ── DELETE ────────────────────────────────────────────────────────────
+async function deleteExpense(id, btn) {
+  if (!confirm('Delete this expense?')) return;
+  const res  = await fetch(`${API}/expenses.php?id=${id}`, { method:'DELETE' });
+  const json = await res.json();
+  if (json.success) {
+    btn.closest('tr').style.opacity = '0';
+    setTimeout(() => { btn.closest('tr').remove(); }, 300);
+    showToast('Expense deleted.', 'success');
+  }
+}
+
+// ── BUDGETS ───────────────────────────────────────────────────────────
+async function loadBudgets() {
+  const res  = await fetch(`${API}/stats.php`);
+  const json = await res.json();
+  const grid = document.getElementById('budget-grid');
+  if (!json.success) { grid.innerHTML = '<p>Failed to load</p>'; return; }
+
+  grid.innerHTML = json.budgets.map(b => {
+    const spent = parseFloat(b.spent), limit = parseFloat(b.budget_limit);
+    const pct = Math.min(Math.round((spent/limit)*100), 100);
+    const color = pct >= 100 ? 'var(--red)' : pct >= 80 ? 'var(--yellow)' : 'var(--green)';
+    return `
+      <div class="budget-card">
+        <div class="budget-header">
+          <span class="budget-name">${b.category}</span>
+          <span class="budget-amounts">₹${spent.toLocaleString('en-IN',{maximumFractionDigits:0})} / ₹${limit.toLocaleString('en-IN',{maximumFractionDigits:0})}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <div style="font-size:0.78rem;color:${color};margin-bottom:10px">${pct}% used</div>
+        <div class="budget-edit">
+          <input type="number" id="bl-${b.category}" placeholder="New limit (₹)" min="0"/>
+          <button class="btn-sm" onclick="updateBudget('${b.category}')">Update</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function updateBudget(category) {
+  const limit = parseFloat(document.getElementById('bl-' + category).value);
+  if (!limit || limit <= 0) { showToast('Enter a valid limit.', 'warn'); return; }
+  const res  = await fetch(`${API}/budgets.php`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ category, limit })
+  });
+  const json = await res.json();
+  if (json.success) { showToast(`Budget for ${category} updated!`, 'success'); loadBudgets(); }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+loadDashboard();
+</script>
+</body>
+</html>
